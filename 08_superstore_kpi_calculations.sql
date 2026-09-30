@@ -20,32 +20,41 @@ SELECT
 FROM public.superstore;
 
 
--- 2. Yearly KPIs With YoY Growth
-WITH yearly AS (
+-- 2. Monthly KPIs With Month-over-Month (MoM) Growth
+WITH monthly AS (
     SELECT
         order_year,
+        order_month,
+        order_month_name,
         SUM(sales) AS sales,
         SUM(profit) AS profit,
         COUNT(DISTINCT order_id) AS orders
     FROM public.superstore
-    GROUP BY order_year
+    GROUP BY
+        order_year,
+        order_month,
+        order_month_name
 ),
-yearly_with_previous AS (
+monthly_with_previous AS (
     SELECT
         order_year,
+        order_month,
+        order_month_name,
         sales,
         profit,
         orders,
         LAG(sales) OVER (
-            ORDER BY order_year
+            ORDER BY order_year, order_month
         ) AS previous_sales,
         LAG(profit) OVER (
-            ORDER BY order_year
+            ORDER BY order_year, order_month
         ) AS previous_profit
-    FROM yearly
+    FROM monthly
 )
 SELECT
     order_year,
+    order_month,
+    order_month_name,
     ROUND(sales, 2) AS total_sales,
     ROUND(profit, 2) AS total_profit,
     ROUND(
@@ -57,14 +66,16 @@ SELECT
         (sales - previous_sales)
         / NULLIF(previous_sales, 0) * 100,
         2
-    ) AS sales_yoy_pct,
+    ) AS sales_mom_pct,
     ROUND(
         (profit - previous_profit)
         / NULLIF(ABS(previous_profit), 0) * 100,
         2
-    ) AS profit_yoy_pct
-FROM yearly_with_previous
-ORDER BY order_year;
+    ) AS profit_mom_pct
+FROM monthly_with_previous
+ORDER BY
+    order_year,
+    order_month;
 
 
 -- 3. Monthly Trend
@@ -191,3 +202,12 @@ SELECT
 FROM public.superstore
 GROUP BY ship_mode
 ORDER BY avg_shipping_days;
+
+
+-- 11. Data Coverage Check (use for the dashboard footnote)
+SELECT
+    COUNT(*) AS row_count,
+    MIN(order_date) AS first_order_date,
+    MAX(order_date) AS last_order_date,
+    COUNT(DISTINCT order_year) AS years_covered
+FROM public.superstore;
