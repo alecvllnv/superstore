@@ -173,7 +173,6 @@ GROUP BY customer_name
 ORDER BY total_sales DESC
 LIMIT 10;
 
-
 -- 9. Discount Impact on Profit
 SELECT
     CASE
@@ -182,17 +181,32 @@ SELECT
         WHEN discount <= 0.4 THEN '21-40%'
         ELSE '41%+'
     END AS discount_bucket,
-    COUNT(*) AS line_items,
-    ROUND(SUM(sales), 2) AS total_sales,
-    ROUND(SUM(profit), 2) AS total_profit,
+
     ROUND(
         SUM(profit) / NULLIF(SUM(sales), 0) * 100,
         2
-    ) AS profit_margin_pct
-FROM public.superstore
+    ) AS profit_margin_pct,
+
+    CASE
+        WHEN SUM(profit) / NULLIF(SUM(sales), 0) * 100 >= 0
+        THEN ROUND(
+            SUM(profit) / NULLIF(SUM(sales), 0) * 100,
+            2
+        )
+        ELSE NULL
+    END AS positive_profit_margin,
+
+    CASE
+        WHEN SUM(profit) / NULLIF(SUM(sales), 0) * 100 < 0
+        THEN ROUND(
+            SUM(profit) / NULLIF(SUM(sales), 0) * 100,
+            2
+        )
+        ELSE NULL
+    END AS negative_profit_margin
+FROM schema_4.superstore
 GROUP BY 1
 ORDER BY MIN(discount);
-
 
 -- 10. Shipping Performance by Ship Mode
 SELECT
